@@ -112,7 +112,7 @@ RemoteDatabase::check_integrity(uint32_t flags)
     request.mutable_db_check_integrity_request()->set_db_handle(m_remote_handle);
     request.mutable_db_check_integrity_request()->set_flags(flags);
 
-    std::auto_ptr<Protocol> reply(env->perform_request(&request));
+    std::unique_ptr<Protocol> reply(env->perform_request(&request));
 
     assert(reply->has_db_check_integrity_reply());
 

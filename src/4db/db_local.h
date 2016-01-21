@@ -30,7 +30,7 @@
 // Always verify that a file of level N does not include headers > N!
 #include "1base/scoped_ptr.h"
 // need to include the header file, a forward declaration of class Compressor
-// is not sufficient because std::auto_ptr then fails to call the
+// is not sufficient because std::unique_ptr then fails to call the
 // destructor
 #include "2compressor/compressor.h"
 #include "3btree/btree_index.h"
@@ -281,7 +281,7 @@ class LocalDatabase : public Database {
     ups_compare_func_t m_cmp_func;
 
     // The record compressor; can be null
-    std::auto_ptr<Compressor> m_record_compressor;
+    std::unique_ptr<Compressor> m_record_compressor;
 
     // The key compression algorithm
     int m_key_compression_algo;
