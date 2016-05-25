@@ -63,6 +63,21 @@ compare(void *vlhs, void *vrhs)
 rb_proto(static, rbt_, TxnIndex, TxnNode)
 rb_gen(static, rbt_, TxnIndex, TxnNode, node, compare)
 
+static inline int
+can_flush_transactions(LocalTxnManager *tm)
+{
+  int to_flush = 0;
+
+  LocalTxn *oldest = (LocalTxn *)tm->oldest_txn();
+  for (; oldest; oldest = (LocalTxn *)oldest->next()) {
+    if (oldest->is_committed() || oldest->is_aborted())
+      break;
+    to_flush++;
+  }
+
+  return to_flush;
+}
+
 static inline void
 flush_committed_txns_impl(LocalTxnManager *tm, Context *context)
 {
@@ -560,8 +575,10 @@ LocalTxnManager::commit(Txn *htxn)
     flush_transaction_to_journal(txn);
 
     // flush committed transactions
-    if (likely(notset(lenv()->flags(), UPS_DONT_FLUSH_TRANSACTIONS)))
-      flush_committed_txns_impl(this, &context);
+    if (likely(notset(lenv()->flags(), UPS_DONT_FLUSH_TRANSACTIONS))) {
+      if (unlikely(can_flush_transactions(this) > 10))
+        flush_committed_txns_impl(this, &context);
+    }
   }
   catch (Exception &ex) {
     return ex.code;
@@ -579,8 +596,10 @@ LocalTxnManager::abort(Txn *htxn)
     txn->abort();
 
     // flush committed transactions
-    if (likely(notset(lenv()->flags(), UPS_DONT_FLUSH_TRANSACTIONS)))
-      flush_committed_txns_impl(this, &context);
+    if (likely(notset(lenv()->flags(), UPS_DONT_FLUSH_TRANSACTIONS))) {
+      if (unlikely(can_flush_transactions(this) > 10))
+        flush_committed_txns_impl(this, &context);
+    }
   }
   catch (Exception &ex) {
     return ex.code;
